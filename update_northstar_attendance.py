@@ -21,13 +21,19 @@ save_delay = 10
 
 off_screen_clear: Coord = Coord(x=600, y=100)
 
-calendar_icon: Coord = Coord(x=430, y=175)
-load_icon: Coord = Coord(x=700, y=175)
-save_icon: Coord = Coord(x=325, y=1050)
+calendar_icon: Coord = Coord(x=375, y=175)
+load_icon: Coord = Coord(x=610, y=175)
+save_icon: Coord = Coord(x=280, y=1050)
+
+# First day on the calendar
+calendar_start: Coord = Coord(x=380, y=245)
+
+calendar_day_offset_pixels_x: int = 29
+calendar_day_offset_pixels_y: int = 21
 
 # These are the hours where you right click to set the attendance for the hour
-hour_offset: int = 85
-hour_start: Coord = Coord(x=650, y=290)
+hour_offset: int = 75
+hour_start: Coord = Coord(x=570, y=280)
 hour_mark_all_present_offset_x: int = 50
 hour_mark_all_present_offset_y: int = 15
 
@@ -45,12 +51,6 @@ hours: list[Hour] = [
         hour="hour_4", coord=Coord(x=hour_start.x + (hour_offset * 3), y=hour_start.y)
     ),
 ]
-
-# First day on the calendar
-calendar_start: Coord = Coord(x=440, y=250)
-
-calendar_day_offset_pixels_x: int = 32
-calendar_day_offset_pixels_y: int = 25
 
 
 def click(right_click: bool = False) -> None:
@@ -123,6 +123,46 @@ def set_all_present() -> None:
 
         click()
         sleep(0.5)
+
+
+def test_icons() -> None:
+    sleep(2)
+    pag.moveTo(off_screen_clear.x, off_screen_clear.y)
+    sleep(1)
+    pag.moveTo(calendar_icon.x, calendar_icon.y)
+    sleep(1)
+    pag.moveTo(load_icon.x, load_icon.y)
+    sleep(1)
+    pag.moveTo(save_icon.x, save_icon.y)
+    sleep(1)
+
+
+def test_hours() -> None:
+    sleep(2)
+    for hour in hours:
+        pag.moveTo(hour.coord.x, hour.coord.y)
+        sleep(1)
+
+
+def test_days() -> None:
+    """This relies on the calendar being open."""
+    sleep(2)
+    pag.moveTo(calendar_start.x, calendar_start.y)
+    sleep(1)
+
+    for i in range(5):
+        pag.moveTo(
+            calendar_start.x + (calendar_day_offset_pixels_x * i),
+            calendar_start.y + (calendar_day_offset_pixels_y * i),
+        )
+        sleep(1)
+
+
+def test_positions() -> None:
+    """Just a way to test mouse positions"""
+    test_icons()
+    test_hours()
+    test_days()
 
 
 def main():
