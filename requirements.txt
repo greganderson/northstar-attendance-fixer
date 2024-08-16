@@ -1,3 +1,9 @@
 openpyxl
 pandas
 pyautogui
+easyocr
+matplotlib
+opencv-python
+mss
+numpy
+pillow
