@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-import pyautogui as pag
 from time import sleep
+
+import pandas as pd
+import pyautogui as pag
 
 
 @dataclass
@@ -14,6 +16,19 @@ class Hour:
     hour: str
     coord: Coord
 
+#do_not_include: list[str] = ["Colby Haney", "Hannah Kearl", "Bailey Nield"]
+do_not_include: list[str] = []
+df = pd.read_excel("attendance.xlsx")
+names: list[str] = sorted([name for name in df.name.unique() if name not in do_not_include], key=lambda name: name.split()[-1])
+
+name_position_start: Coord = Coord(x=375, y=310)
+name_position_offset = 31
+name_positions: dict[str, Coord] = {name: Coord(x=name_position_start.x, y=name_position_start.y + (name_position_offset * i)) for i, name in enumerate(names)}
+
+attendance_icon_start_x: int = 595
+attendance_icon_offset_x: int = 72
+
+absense_icon_offset_y: int = 72
 
 click_delay = 0.2
 load_delay = 6
@@ -21,9 +36,14 @@ save_delay = 10
 
 off_screen_clear: Coord = Coord(x=600, y=100)
 
+# Icons
 calendar_icon: Coord = Coord(x=375, y=175)
 load_icon: Coord = Coord(x=610, y=175)
 save_icon: Coord = Coord(x=280, y=1050)
+
+# Field where you can click and manually put in the date
+calendar_text_field_offset: int = 30
+calendar_text_field: Coord = Coord(x=calendar_icon.x - calendar_text_field_offset, y=calendar_icon.y)
 
 # First day on the calendar
 calendar_start: Coord = Coord(x=380, y=245)
@@ -62,7 +82,7 @@ def click(right_click: bool = False) -> None:
 
 
 def clear() -> None:
-    """Clicks off screen to clear the calendar or anything else that might be pulled up."""
+    """ Clicks off screen to clear the calendar or anything else that might be pulled up. """
     pag.moveTo(off_screen_clear.x, off_screen_clear.y)
     click()
 
@@ -75,7 +95,7 @@ def save() -> None:
 
 
 def load() -> None:
-    """Clicks the load icon, then waits a little bit for the page to load"""
+    """ Clicks the load icon, then waits a little bit for the page to load """
     pag.moveTo(load_icon.x, load_icon.y)
     click()
 
@@ -86,7 +106,7 @@ def load() -> None:
 
 
 def load_day(day: int, week: int) -> None:
-    """Loads a specific day. Note that `day` is 0 based, so day 0 is the Monday of the top week."""
+    """ Loads a specific day. Note that `day` is 0 based, so day 0 is the Monday of the top week. """
     clear()
 
     pag.moveTo(calendar_icon.x, calendar_icon.y)
@@ -101,8 +121,30 @@ def load_day(day: int, week: int) -> None:
     load()
 
 
+def go_to_date(date: str) -> None:
+    """
+    Goes to the specified date.
+
+    @param date: The date in the format "YYYY-MM-DD"
+    """
+    clear()
+
+    pag.moveTo(calendar_text_field.x, calendar_text_field.y)
+    click()
+
+    # Clear out the text
+    pag.hotkey("command", "a")
+
+    # Type in the date
+    pag.typewrite(date)
+
+    pag.press("enter")
+
+    load()
+
+
 def set_week_attendance(week: int) -> None:
-    """Sets the attendance for the whole week"""
+    """ Sets the attendance for the whole week """
     for i in range(5):
         load_day(day=i, week=week)
         set_all_present()
@@ -110,7 +152,7 @@ def set_week_attendance(week: int) -> None:
 
 
 def set_all_present() -> None:
-    """Sets everyone to present for the current selected day."""
+    """ Sets everyone to present for the current selected day. """
     for hour in hours:
         clear()
         pag.moveTo(hour.coord.x, hour.coord.y)
@@ -125,6 +167,16 @@ def set_all_present() -> None:
         sleep(0.5)
 
 
+def set_partial_attendance(student: str, num_hours: int) -> None:
+    """ Sets the number of absenses for the selected day."""
+    clear()
+    for hour in range(4 - num_hours):
+        pag.moveTo(attendance_icon_start_x + (hour * attendance_icon_offset_x), name_positions[student].y)
+        click()
+
+        pag.moveTo(attendance_icon_start_x + (hour * attendance_icon_offset_x), name_positions[student].y + absense_icon_offset_y)
+        click()
+
 def test_icons() -> None:
     sleep(2)
     pag.moveTo(off_screen_clear.x, off_screen_clear.y)
@@ -137,6 +189,21 @@ def test_icons() -> None:
     sleep(1)
 
 
+def test_attendance_arrow_icons() -> None:
+    sleep(2)
+
+    name1 = "Christopher Cooley"
+    name2 = "Mathew Zamacona"
+
+    for i in range(4):
+        pag.moveTo(attendance_icon_start_x + (i * attendance_icon_offset_x), name_positions[name1].y)
+        sleep(1)
+
+    for i in range(4):
+        pag.moveTo(attendance_icon_start_x + (i * attendance_icon_offset_x), name_positions[name2].y)
+        sleep(1)
+
+
 def test_hours() -> None:
     sleep(2)
     for hour in hours:
@@ -145,7 +212,7 @@ def test_hours() -> None:
 
 
 def test_days() -> None:
-    """This relies on the calendar being open."""
+    """ This relies on the calendar being open. """
     sleep(2)
     pag.moveTo(calendar_start.x, calendar_start.y)
     sleep(1)
@@ -158,11 +225,22 @@ def test_days() -> None:
         sleep(1)
 
 
-def test_positions() -> None:
-    """Just a way to test mouse positions"""
+def test_names() -> None:
+    for name in names:
+        pag.moveTo(name_positions[name].x, name_positions[name].y)
+        sleep(1)
+
+def test_mathew() -> None:
+    pag.moveTo(name_positions["Mathew Zamacona"].x, name_positions["Mathew Zamacona"].y)
+    sleep(1)
+
+
+def test_all() -> None:
+    """ Just a way to test mouse positions """
     test_icons()
     test_hours()
     test_days()
+    test_attendance_arrow_icons()
 
 
 def main():
@@ -172,7 +250,12 @@ def main():
     # load_day(day=0, week=3)
     # set_all_present()
 
-    set_week_attendance(3)
+    # set_partial_attendance("Ryan Frump", 1)
+    # set_partial_attendance("Mathew Zamacona", 3)
+
+    # set_week_attendance(2)
+
+    go_to_date("2024-06-03")
 
 
 if __name__ == "__main__":
