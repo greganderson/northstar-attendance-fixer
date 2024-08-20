@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from time import sleep
 
 import pandas as pd
+from pandas.core.groupby.generic import DataFrameGroupBy
 import pyautogui as pag
 
 
@@ -16,14 +17,18 @@ class Hour:
     hour: str
     coord: Coord
 
-#do_not_include: list[str] = ["Colby Haney", "Hannah Kearl", "Bailey Nield"]
-do_not_include: list[str] = []
+@dataclass
+class PartialAttendanceRecord:
+    name: str
+    num_hours: int
+
+
+# Read in spreadsheet and group by date
 df = pd.read_excel("attendance.xlsx")
-names: list[str] = sorted([name for name in df.name.unique() if name not in do_not_include], key=lambda name: name.split()[-1])
+attendance_groups: DataFrameGroupBy = df.groupby("AttendDate")
 
 name_position_start: Coord = Coord(x=375, y=310)
 name_position_offset = 31
-name_positions: dict[str, Coord] = {name: Coord(x=name_position_start.x, y=name_position_start.y + (name_position_offset * i)) for i, name in enumerate(names)}
 
 attendance_icon_start_x: int = 595
 attendance_icon_offset_x: int = 72
@@ -105,22 +110,6 @@ def load() -> None:
     sleep(load_delay)
 
 
-def load_day(day: int, week: int) -> None:
-    """ Loads a specific day. Note that `day` is 0 based, so day 0 is the Monday of the top week. """
-    clear()
-
-    pag.moveTo(calendar_icon.x, calendar_icon.y)
-    click()
-
-    pag.moveTo(
-        calendar_start.x + (calendar_day_offset_pixels_x * day),
-        calendar_start.y + (calendar_day_offset_pixels_y * week),
-    )
-    click()
-
-    load()
-
-
 def go_to_date(date: str) -> None:
     """
     Goes to the specified date.
@@ -143,18 +132,10 @@ def go_to_date(date: str) -> None:
     load()
 
 
-def set_week_attendance(week: int) -> None:
-    """ Sets the attendance for the whole week """
-    for i in range(5):
-        load_day(day=i, week=week)
-        set_all_present()
-        save()
-
-
 def set_all_present() -> None:
     """ Sets everyone to present for the current selected day. """
+    clear()
     for hour in hours:
-        clear()
         pag.moveTo(hour.coord.x, hour.coord.y)
         click(right_click=True)
 
@@ -164,10 +145,15 @@ def set_all_present() -> None:
         )
 
         click()
-        sleep(0.5)
 
 
-def set_partial_attendance(student: str, num_hours: int) -> None:
+def get_partial_attendance_list(group: DataFrameGroupBy) -> list[PartialAttendanceRecord]:
+    """ Returns a list of PartialAttendanceRecord objects for the given date. """
+    partial_attendance_group = group[group["Hours Attended"] < 4]
+    return [(row["name"], row["Hours Attended"]) for _, row in partial_attendance_group.iterrows()]
+
+
+def set_partial_attendance(student: str, num_hours: int, name_positions: dict[str, Coord]) -> None:
     """ Sets the number of absenses for the selected day."""
     clear()
     for hour in range(4 - num_hours):
@@ -176,6 +162,21 @@ def set_partial_attendance(student: str, num_hours: int) -> None:
 
         pag.moveTo(attendance_icon_start_x + (hour * attendance_icon_offset_x), name_positions[student].y + absense_icon_offset_y)
         click()
+
+def set_attendance_for_date(group: DataFrameGroupBy, date: str) -> None:
+    """ Sets the attendance for the specified date. """
+    go_to_date(date)
+    set_all_present()
+
+    # Get list of students for the date and create the student: position map
+    names: list[str] = sorted([name for name in group.name], key=lambda name: name.split()[-1])
+    name_positions: dict[str, Coord] = {name: Coord(x=name_position_start.x, y=name_position_start.y + (name_position_offset * i)) for i, name in enumerate(names)}
+
+
+    partial_attendance_list: list[PartialAttendanceRecord] = get_partial_attendance_list(group)
+    for student, num_hours in partial_attendance_list:
+        set_partial_attendance(student, num_hours, name_positions)
+
 
 def test_icons() -> None:
     sleep(2)
@@ -225,16 +226,6 @@ def test_days() -> None:
         sleep(1)
 
 
-def test_names() -> None:
-    for name in names:
-        pag.moveTo(name_positions[name].x, name_positions[name].y)
-        sleep(1)
-
-def test_mathew() -> None:
-    pag.moveTo(name_positions["Mathew Zamacona"].x, name_positions["Mathew Zamacona"].y)
-    sleep(1)
-
-
 def test_all() -> None:
     """ Just a way to test mouse positions """
     test_icons()
@@ -247,15 +238,8 @@ def main():
     # Give time to switch to RDP tab
     sleep(2)
 
-    # load_day(day=0, week=3)
-    # set_all_present()
-
-    # set_partial_attendance("Ryan Frump", 1)
-    # set_partial_attendance("Mathew Zamacona", 3)
-
-    # set_week_attendance(2)
-
-    go_to_date("2024-06-03")
+    for date, group in attendance_groups:
+        set_attendance_for_date(group, date.strftime("%Y-%m-%d"))
 
 
 if __name__ == "__main__":
