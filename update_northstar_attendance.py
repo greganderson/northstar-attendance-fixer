@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import sys
 from time import sleep
 
 import pandas as pd
@@ -23,8 +24,12 @@ class PartialAttendanceRecord:
     num_hours: int
 
 
+if len(sys.argv) != 2:
+    print("Usage: python update_northstar_attendance.py <attendance-xlsx-file>")
+    sys.exit(1)
+
 # Read in spreadsheet and group by date
-df = pd.read_excel("attendance.xlsx")
+df = pd.read_excel(sys.argv[1])
 attendance_groups: DataFrameGroupBy = df.groupby("AttendDate")
 
 name_position_start: Coord = Coord(x=375, y=310)
@@ -206,6 +211,7 @@ def test_attendance_arrow_icons() -> None:
 
 
 def test_hours() -> None:
+    """ Tests the location of where you'd right click to mark all present. """
     sleep(2)
     for hour in hours:
         pag.moveTo(hour.coord.x, hour.coord.y)
