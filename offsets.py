@@ -19,7 +19,7 @@ OFF_SCREEN_CLEAR_Y: int = 100
 
 # Field where you can click and manually put in the date
 CALENDAR_TEXT_FIELD_X: int = 345
-CALENDAR_TEXT_FIELD_Y: int = 175
+CALENDAR_TEXT_FIELD_Y: int = 170
 
 LOAD_ICON_X: int = 620
 LOAD_ICON_Y: int = 175

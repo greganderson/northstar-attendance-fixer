@@ -169,11 +169,11 @@ def main():
 
     # Read in spreadsheet and group by date
     df = pd.read_excel(sys.argv[1])
-    attendance_groups: DataFrameGroupBy = df.groupby("AttendDate")
+    filtered = df[df["AttendDate"] > pd.Timestamp("2024-04-25")]
+    attendance_groups: DataFrameGroupBy = filtered.groupby("AttendDate")
 
     # Start date for when to start putting in attendance
     cutoff_date = pd.Timestamp("2024-04-25")
-    filtered_attendance_groups = attendance_groups.filter(lambda group: group.name >= cutoff_date)
 
     # Give time to switch to RDP tab
     sleep(2)
@@ -181,7 +181,7 @@ def main():
     # Register signal handler for CTRL+C
     signal.signal(signal.SIGINT, signal_handler)
 
-    for date, group in filtered_attendance_groups:
+    for date, group in attendance_groups:
         set_attendance_for_date(group, date.strftime("%Y-%m-%d"))
 
     print(f"Finished in {time() - start} seconds")
